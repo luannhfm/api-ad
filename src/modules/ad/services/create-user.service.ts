@@ -5,8 +5,8 @@ export async function createUserService(data: CreateUserDTO, client: ldap.Client
   const { name, username, password, ou } = data;
 
   const dn = `CN=${name},${ou}`;
-  const encodedPwd = Buffer.from(`"${password}"`, 'utf16le');
 
+  // 1. Criação do usuário sem senha
   const newUser = {
     cn: name,
     sn: name.split(' ').slice(-1)[0],
@@ -15,7 +15,6 @@ export async function createUserService(data: CreateUserDTO, client: ldap.Client
     userPrincipalName: `${username}@empresa.com`
   };
 
-  // 1. Adiciona o usuário
   await new Promise<void>((resolve, reject) => {
     client.add(dn, newUser, (err) => {
       if (err) return reject(err);
@@ -23,33 +22,24 @@ export async function createUserService(data: CreateUserDTO, client: ldap.Client
     });
   });
 
-  // 2. Seta a senha
-  await new Promise<void>((resolve, reject) => {
-    const change = new ldap.Change({
+  // 2. Modificação para adicionar senha e ativar a conta
+  const changes = [
+    new ldap.Change({
       operation: 'replace',
-      modification: new ldap.Attribute({
-        type: 'unicodePwd',
-        values: [encodedPwd]
-      })
-    });
-
-    client.modify(dn, change, (err) => {
-      if (err) return reject(err);
-      resolve();
-    });
-  });
-
-  // 3. Ativa o usuário (userAccountControl = 512)
-  await new Promise<void>((resolve, reject) => {
-    const change = new ldap.Change({
+      modification: {
+        unicodePwd: Buffer.from(`"${password}"`, 'utf16le')
+      }
+    }),
+    new ldap.Change({
       operation: 'replace',
-      modification: new ldap.Attribute({
-        type: 'userAccountControl',
-        values: ['512']
-      })
-    });
+      modification: {
+        userAccountControl: '512' // NORMAL_ACCOUNT
+      }
+    })
+  ];
 
-    client.modify(dn, change, (err) => {
+  await new Promise<void>((resolve, reject) => {
+    client.modify(dn, changes, (err) => {
       if (err) return reject(err);
       resolve();
     });
