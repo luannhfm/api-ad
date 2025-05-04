@@ -14,7 +14,8 @@
     "dotenv": "^16.5.0",
     "fastify": "^5.3.2",
     "fastify-plugin": "^5.0.1",
-    "ldapjs": "^3.0.7"
+    "ldapjs": "^3.0.7",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/ldapjs": "^3.0.6",
