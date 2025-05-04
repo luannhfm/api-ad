@@ -12,7 +12,7 @@ export async function createUserService(data: CreateUserDTO, client: ldap.Client
     sn: name.split(' ').slice(-1)[0],
     objectClass: ['top', 'person', 'organizationalPerson', 'user'],
     sAMAccountName: username,
-    userPrincipalName: `${username}@empresa.com`,
+    userPrincipalName: `${username}@empresa.com`
   };
 
   // 1. Adiciona o usuário
@@ -27,9 +27,10 @@ export async function createUserService(data: CreateUserDTO, client: ldap.Client
   await new Promise<void>((resolve, reject) => {
     const change = new ldap.Change({
       operation: 'replace',
-      modification: {
-        unicodePwd: encodedPwd
-      }
+      modification: new ldap.Attribute({
+        type: 'unicodePwd',
+        values: [encodedPwd]
+      })
     });
 
     client.modify(dn, change, (err) => {
@@ -42,9 +43,10 @@ export async function createUserService(data: CreateUserDTO, client: ldap.Client
   await new Promise<void>((resolve, reject) => {
     const change = new ldap.Change({
       operation: 'replace',
-      modification: {
-        userAccountControl: '512'
-      }
+      modification: new ldap.Attribute({
+        type: 'userAccountControl',
+        values: ['512']
+      })
     });
 
     client.modify(dn, change, (err) => {
