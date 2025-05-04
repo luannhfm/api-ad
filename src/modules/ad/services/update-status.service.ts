@@ -5,15 +5,13 @@ import { env } from 'config/env';
 export async function updateUserStatusService(data: UpdateStatusDTO, client: ldap.Client): Promise<void> {
   const { username, enabled } = data;
 
-  // Bind no LDAP
   await new Promise<void>((resolve, reject) => {
     client.bind(env.LDAP_BIND_DN, env.LDAP_BIND_PASSWORD, err => {
-      if (err) return reject(new Error('Falha no bind com o servidor LDAP'));
+      if (err) return reject(err);
       resolve();
     });
   });
 
-  // Busca DN do usuário
   const searchOptions: ldap.SearchOptions = {
     filter: `(sAMAccountName=${username})`,
     scope: 'sub',
@@ -32,28 +30,26 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
       });
 
       res.on('error', reject);
-
       res.on('end', () => {
         if (!found) reject(new Error('Usuário não encontrado.'));
       });
     });
   });
 
-  // Define status
   const userAccountControl = enabled ? '512' : '514';
 
-  // Aqui está a correção crucial:
+  // Aqui está o ajuste essencial
   const change = new ldap.Change({
     operation: 'replace',
-    modification: {
+    modification: new ldap.Attribute({
       type: 'userAccountControl',
       vals: [userAccountControl]
-    }
+    })
   });
 
   await new Promise<void>((resolve, reject) => {
     client.modify(userDN, change, err => {
-      if (err) return reject(new Error(`Erro ao modificar status: ${err.message}`));
+      if (err) return reject(err);
       resolve();
     });
   });
