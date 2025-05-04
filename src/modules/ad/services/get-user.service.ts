@@ -30,18 +30,20 @@ export async function getUserDetailsService(username: string, client: ldap.Clien
 
       let found = false;
 
-      res.on('searchEntry', (entry:any ) => {
+      res.on('searchEntry',  (entry: any)  => {
         found = true;
         const user = entry.object;
-        const uac = parseInt(user.userAccountControl || '0', 10);
+
+        const uacRaw = user.userAccountControl;
+        const uac = uacRaw ? parseInt(uacRaw, 10) : 0;
         const isDisabled = (uac & 2) !== 0;
 
         resolve({
-          name: user.cn,
-          email: user.mail,
-          username: user.userPrincipalName,
-          createdAt: user.whenCreated,
-          active: !isDisabled
+          name: user.cn || '',
+          email: user.mail || '',
+          username: user.userPrincipalName || '',
+          createdAt: user.whenCreated || '',
+          active: uacRaw !== undefined ? !isDisabled : undefined
         });
       });
 
