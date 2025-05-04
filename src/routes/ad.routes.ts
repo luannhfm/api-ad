@@ -1,5 +1,6 @@
 // src/routes/ad.routes.ts
 import { FastifyInstance } from 'fastify';
+import { authenticateUserController } from 'modules/ad/controllers/authenticate-user.controller';
 import { checkUserStatusController } from 'modules/ad/controllers/check-status.controller';
 import { createUserController } from 'modules/ad/controllers/create-user.controller';
 import { getUserDetailsController } from 'modules/ad/controllers/get-user.controller';
@@ -12,4 +13,6 @@ export async function adRoutes(app: FastifyInstance) {
   app.patch('/ad/user/status', updateUserStatusController);
   app.post('/ad/user/details', getUserDetailsController);
   app.get('/ad/users', listUsersController);
+  app.post('/ad/authenticate', authenticateUserController);
+
 }
