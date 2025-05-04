@@ -2,10 +2,19 @@ import ldap from 'ldapjs';
 import { UpdateStatusDTO } from '../dtos/update-status.dto';
 import { env } from 'config/env';
 
+function escapeLdapDN(value: string): string {
+  return value.replace(/[,\\#+<>;"=]/g, '\\$&')
+              .replace(/[\u007F-\uFFFF]/g, c => {
+                return Array.from(c).map(ch => {
+                  const hex = ch.charCodeAt(0).toString(16).padStart(2, '0');
+                  return `\\${hex}`;
+                }).join('');
+              });
+}
+
 export async function updateUserStatusService(data: UpdateStatusDTO, client: ldap.Client): Promise<void> {
   const { username, enabled } = data;
 
-  // Bind com credenciais administrativas
   await new Promise<void>((resolve, reject) => {
     client.bind(env.LDAP_BIND_DN, env.LDAP_BIND_PASSWORD, err => {
       if (err) return reject(err);
@@ -13,7 +22,6 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
     });
   });
 
-  // Busca o DN do usuário
   const searchOptions: ldap.SearchOptions = {
     filter: `(sAMAccountName=${username})`,
     scope: 'sub',
@@ -28,9 +36,9 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
 
       res.on('searchEntry', entry => {
         found = true;
-        const dn = entry.dn.toString();
-        console.log('DN encontrado:', dn);
-        resolve(dn);
+        const escapedDN = escapeLdapDN(entry.dn.toString());
+        console.log('DN encontrado:', escapedDN);
+        resolve(escapedDN);
       });
 
       res.on('error', reject);
@@ -40,19 +48,16 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
     });
   });
 
-  // Define o valor do atributo para ativar (512) ou desativar (514)
   const userAccountControl = enabled ? '512' : '514';
 
-  // Correção: usar `values` ao invés de `vals`
   const change = new ldap.Change({
     operation: 'replace',
     modification: new ldap.Attribute({
       type: 'userAccountControl',
-      values: [userAccountControl]
+      vals: [userAccountControl]
     })
   });
 
-  // Aplica a modificação
   await new Promise<void>((resolve, reject) => {
     client.modify(userDN, change, err => {
       if (err) return reject(err);
