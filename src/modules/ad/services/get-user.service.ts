@@ -13,16 +13,9 @@ export async function getUserDetailsService(username: string, client: ldap.Clien
   const searchOptions: ldap.SearchOptions = {
     filter: `(sAMAccountName=${username})`,
     scope: 'sub',
-    attributes: [
-      'cn',
-      'givenName',
-      'sn',
-      'mail',
-      'userPrincipalName',
-      'whenCreated',
-      'userAccountControl'
-    ]
+    attributes: ['cn', 'sAMAccountName', 'mail', 'userAccountControl']
   };
+  
 
   return new Promise((resolve, reject) => {
     client.search(env.LDAP_BASE_DN, searchOptions, (err, res) => {
@@ -30,20 +23,22 @@ export async function getUserDetailsService(username: string, client: ldap.Clien
 
       let found = false;
 
-      res.on('searchEntry',  (entry: any)  => {
+      res.on('searchEntry', entry => {
         found = true;
-        const user = entry.object;
-
-        const uacRaw = user.userAccountControl;
-        const uac = uacRaw ? parseInt(uacRaw, 10) : 0;
-        const isDisabled = (uac & 2) !== 0;
-
+      
+        const attrs = entry.attributes.reduce((acc, attr) => {
+          acc[attr.type] = attr.vals[0];
+          return acc;
+        }, {} as Record<string, string>);
+      
+        const uacRaw = attrs['userAccountControl'];
+        const isDisabled = (parseInt(uacRaw || '0', 10) & 2) !== 0;
+      
         resolve({
-          name: user.cn || '',
-          email: user.mail || '',
-          username: user.userPrincipalName || '',
-          createdAt: user.whenCreated || '',
-          active: uacRaw !== undefined ? !isDisabled : undefined
+          name: attrs['cn'],
+          username: attrs['sAMAccountName'],
+          email: attrs['mail'],
+          active: !isDisabled
         });
       });
 
