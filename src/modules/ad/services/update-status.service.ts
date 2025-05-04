@@ -36,10 +36,11 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
 
       res.on('searchEntry', entry => {
         found = true;
-        const escapedDN = escapeLdapDN(entry.dn.toString());
-        console.log('DN encontrado:', escapedDN);
-        resolve(escapedDN);
+        const dn = entry.dn.toString(); // usar diretamente, sem escape
+        console.log('DN encontrado:', dn);
+        resolve(dn);
       });
+      
 
       res.on('error', reject);
       res.on('end', () => {
