@@ -5,6 +5,7 @@ import { env } from 'config/env';
 export async function updateUserStatusService(data: UpdateStatusDTO, client: ldap.Client): Promise<void> {
   const { username, enabled } = data;
 
+  // Bind com credenciais administrativas
   await new Promise<void>((resolve, reject) => {
     client.bind(env.LDAP_BIND_DN, env.LDAP_BIND_PASSWORD, err => {
       if (err) return reject(err);
@@ -12,6 +13,7 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
     });
   });
 
+  // Busca o DN do usuário
   const searchOptions: ldap.SearchOptions = {
     filter: `(sAMAccountName=${username})`,
     scope: 'sub',
@@ -26,9 +28,9 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
 
       res.on('searchEntry', entry => {
         found = true;
-        console.log('DN encontrado:', entry.dn.toString());
-        resolve(entry.dn.toString());
-
+        const dn = entry.dn.toString();
+        console.log('DN encontrado:', dn);
+        resolve(dn);
       });
 
       res.on('error', reject);
@@ -38,17 +40,19 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
     });
   });
 
+  // Define o valor do atributo para ativar (512) ou desativar (514)
   const userAccountControl = enabled ? '512' : '514';
 
-  // Aqui está o ajuste essencial
+  // Correção: usar `values` ao invés de `vals`
   const change = new ldap.Change({
     operation: 'replace',
     modification: new ldap.Attribute({
       type: 'userAccountControl',
-      vals: [userAccountControl]
+      values: [userAccountControl]
     })
   });
 
+  // Aplica a modificação
   await new Promise<void>((resolve, reject) => {
     client.modify(userDN, change, err => {
       if (err) return reject(err);
