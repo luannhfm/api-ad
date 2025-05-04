@@ -1,5 +1,5 @@
 import ldap from 'ldapjs';
-import { en
+import { env } from 'config/env';
 
 export async function checkUserStatusService(username: string, client: ldap.Client): Promise<boolean> {
   await new Promise<void>((resolve, reject) => {
