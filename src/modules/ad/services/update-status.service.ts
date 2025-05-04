@@ -26,7 +26,9 @@ export async function updateUserStatusService(data: UpdateStatusDTO, client: lda
 
       res.on('searchEntry', entry => {
         found = true;
+        console.log('DN encontrado:', entry.dn.toString());
         resolve(entry.dn.toString());
+
       });
 
       res.on('error', reject);
